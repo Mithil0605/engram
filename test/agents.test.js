@@ -5,6 +5,7 @@ const assert = require('node:assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { spawnSync } = require('node:child_process');
 const { stripJsonComments, loadJsonc, deepSet, appendToml } = require('../lib/agents');
 
 function tmp() {
@@ -49,4 +50,43 @@ test('appendToml adds a section once and reports already configured', () => {
   assert.equal(r.ok, false);
   assert.match(r.message, /already configured/);
   assert.equal(fs.readFileSync(f, 'utf8').split('[mcp_servers.engram]').length - 1, 1);
+});
+
+test('cline integrate writes the CLI transport format under .cline/data/settings', () => {
+  const script = `
+    const a = require(${JSON.stringify(path.join(__dirname, '..', 'lib', 'agents.js'))});
+    process.stdout.write(JSON.stringify(a.integrate('cline')));
+  `;
+  const home = tmp();
+  fs.mkdirSync(path.join(home, '.cline', 'data', 'settings'), { recursive: true });
+  const res = spawnSync(process.execPath, ['-e', script], { env: { ...process.env, HOME: home }, encoding: 'utf8' });
+  assert.equal(res.status, 0, res.stderr);
+  const out = JSON.parse(res.stdout);
+  assert.equal(out.ok, true);
+  assert.match(out.message, /transport/i);
+  const cfg = JSON.parse(fs.readFileSync(path.join(home, '.cline', 'data', 'settings', 'cline_mcp_settings.json'), 'utf8'));
+  assert.deepEqual(cfg.mcpServers.engram, { transport: { type: 'stdio', command: 'engram', args: ['serve-mcp'] } });
+  const again = JSON.parse(spawnSync(process.execPath, ['-e', script], { env: { ...process.env, HOME: home }, encoding: 'utf8' }).stdout);
+  assert.equal(again.ok, false);
+  assert.match(again.message, /already configured/);
+  const finalCfg = JSON.parse(fs.readFileSync(path.join(home, '.cline', 'data', 'settings', 'cline_mcp_settings.json'), 'utf8'));
+  assert.deepEqual(finalCfg.mcpServers.engram, { transport: { type: 'stdio', command: 'engram', args: ['serve-mcp'] } });
+});
+
+test('freebuff integrate writes the stdio format to ~/.agents/mcp.json', () => {
+  const script = `
+    const a = require(${JSON.stringify(path.join(__dirname, '..', 'lib', 'agents.js'))});
+    process.stdout.write(JSON.stringify(a.integrate('freebuff')));
+  `;
+  const home = tmp();
+  const res = spawnSync(process.execPath, ['-e', script], { env: { ...process.env, HOME: home }, encoding: 'utf8' });
+  assert.equal(res.status, 0, res.stderr);
+  const out = JSON.parse(res.stdout);
+  assert.equal(out.ok, true);
+  const p = path.join(home, '.agents', 'mcp.json');
+  const cfg = JSON.parse(fs.readFileSync(p, 'utf8'));
+  assert.deepEqual(cfg.mcpServers.engram, { type: 'stdio', command: 'engram', args: ['serve-mcp'] });
+  const again = JSON.parse(spawnSync(process.execPath, ['-e', script], { env: { ...process.env, HOME: home }, encoding: 'utf8' }).stdout);
+  assert.equal(again.ok, false);
+  assert.match(again.message, /already configured/);
 });
