@@ -62,6 +62,7 @@ const HELP = `engram — shared memory for every AI agent
   engram devices
   engram pair          # start a pairing code (needs root token)
   engram unlock        # set/enter store password
+  engram agents [scan|install]   # detect AI agents on this machine & wire them to engram
   engram serve-mcp     # run MCP stdio server for any AI agent
   Use ENGRAM_URL=... to point at a remote daemon, ENGRAM_TOKEN=... to auth.
 `;
@@ -82,6 +83,39 @@ async function main() {
   }
   const project = optOf('--project') || 'default';
   const limit = Number(optOf('--limit')) || 20;
+
+  if (cmd === 'agents') {
+    const agents = require('../lib/agents');
+    const sub = args[0] || 'scan';
+    if (sub === 'scan') {
+      const found = agents.scan();
+      if (found.length === 0) {
+        console.log('No known AI agents detected on this machine.');
+        return;
+      }
+      console.log('AI agents detected on this machine:');
+      for (const f of found) {
+        console.log(`  ${f.name.padEnd(10)} ${f.label}${f.config ? '  — ' + f.config : ''}`);
+      }
+      console.log('\nRun "engram agents install" to wire each one to engram.');
+      return;
+    }
+    if (sub === 'install') {
+      const results = agents.install();
+      if (results.length === 0) {
+        console.log('No known AI agents detected on this machine.');
+        return;
+      }
+      console.log('Integrating AI agents with engram:');
+      for (const r of results) {
+        const icon = r.ok ? '✓' : '·';
+        console.log(`  ${icon} ${r.label.padEnd(12)} ${r.message}`);
+      }
+      return;
+    }
+    console.log('usage: engram agents [scan|install]');
+    return;
+  }
 
   switch (cmd) {
     case 'status': {

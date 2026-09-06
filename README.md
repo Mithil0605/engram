@@ -56,6 +56,21 @@ curl -X POST http://127.0.0.1:8040/v1/unlock -d '{"password":"a strong passphras
 
 After 5 wrong unlock attempts the daemon locks for a cooldown period.
 
+### Auto-discover and integrate the AI agents on this machine
+
+Engram can locate whatever AI agents are present and register itself as their
+shared MCP memory — no per-agent config hunting:
+
+```sh
+engram agents scan      # what agents are here, where their config lives
+engram agents install   # wire each supported one to engram's MCP server
+```
+
+Detected agents (when present): Claude Code, Codex CLI, Gemini CLI, opencode,
+Cline, Cursor, and Freebuff. Unsupported ones are reported so an adapter can be
+added in `lib/agents.js`. Every modified config gets a `.engram-bak` backup.
+The command is idempotent — re-running it does nothing once integrated.
+
 ### Agent / MCP
 
 `engram serve-mcp` exposes the memory tools over Model Context Protocol (stdio)
