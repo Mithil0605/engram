@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.*
+*.log
+
+# Engram runtime data (never commit memory stores or secrets)
+engram.json
+*.store
+*.store.*.tmp
+.data/
+~/.local/share/engramd/

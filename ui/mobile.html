@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#0b0e14" />
+  <title>Engram · Mobile</title>
+  <link rel="stylesheet" href="/assets/app.css" />
+  <style>
+    body { padding: 18px 16px; }
+    .card { border-radius: 18px; }
+    .input-lg { font-size: 18px; letter-spacing: 4px; text-align: center; font-variant-numeric: tabular-nums; }
+    .btn-lg { padding: 14px; font-size: 16px; width: 100%; margin-top: 12px; }
+    .flex-space { display: flex; justify-content: space-between; align-items: center; }
+    .chip { font-size: 12px; color: #b7adff; background: rgba(124,108,255,.14); border-radius: 8px; padding: 4px 10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header style="margin-bottom:16px">
+      <div class="logo">E</div>
+      <div class="title">
+        <h1>Engram</h1>
+        <p>Every agent. One memory.</p>
+      </div>
+    </header>
+
+    <div id="pair-view" class="card">
+      <h2 style="margin-top:0">Connect this phone</h2>
+      <p class="muted">Enter the 6-digit code shown in the Engram dashboard on your computer.</p>
+      <input class="input-lg" id="code" inputmode="numeric" maxlength="6" placeholder="000000" autofocus />
+      <input id="name" placeholder="device name (e.g. My Phone)" style="margin-top:10px;width:100%" />
+      <button class="btn btn-lg" id="pair-btn">Connect</button>
+      <div id="pair-msg"></div>
+    </div>
+
+    <div id="mem-view" style="display:none">
+      <div class="flex-space" style="margin-bottom:12px">
+        <span class="chip" id="dev-name"></span>
+        <button class="btn ghost" id="forget-dev" style="padding:8px 12px">Forget device</button>
+      </div>
+      <div class="card">
+        <div class="row">
+          <input id="search-query" placeholder="search memory…" style="flex:2" />
+          <button class="btn" id="search-btn">Go</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2 style="margin-top:0">Add memory</h2>
+        <input id="add-project" value="default" placeholder="project" style="width:100%;margin-bottom:8px" />
+        <textarea id="add-text" placeholder="e.g. Prefer concise answers. Run tests with npm test."></textarea>
+        <button class="btn btn-lg" id="add-btn">Remember</button>
+      </div>
+      <div class="card" id="results" style="margin-top:0">
+        <div class="empty">Tap search to see memories.</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/app.js"></script>
+  <script>
+    (function () {
+      var LS_TOKEN = 'engram.deviceToken';
+      var LS_NAME = 'engram.deviceName';
+      var pairView = document.getElementById('pair-view');
+      var memView = document.getElementById('mem-view');
+      var results = document.getElementById('results');
+      var toast = document.getElementById('pair-msg');
+
+      function esc(s){ return String(s).replace(/[&<>"']/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+      function token(){ return localStorage.getItem(LS_TOKEN); }
+
+      function showErr(msg){ if(toast){ toast.innerHTML = '<div class="banner err" style="margin-top:10px">' + esc(msg) + '</div>'; } }
+
+      function switchToMem(){
+        pairView.style.display = 'none';
+        memView.style.display = 'block';
+        document.getElementById('dev-name').textContent = localStorage.getItem(LS_NAME) || 'device';
+      }
+
+      if (token()) switchToMem();
+
+      function doApi(method, p, body, cb) {
+        var headers = {};
+        var t = token();
+        if (t) headers.Authorization = 'Bearer ' + t;
+        if (body) headers['Content-Type'] = 'application/json';
+        fetch(p, { method: method, headers: headers, body: body ? JSON.stringify(body) : undefined })
+          .then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+          .then(cb);
+      }
+
+      function search() {
+        var q = document.getElementById('search-query').value.trim();
+        var url = q
+          ? '/v1/recall?project=default&query=' + encodeURIComponent(q) + '&limit=20'
+          : '/v1/list?project=default&limit=20';
+        doApi('GET', url, null, function (r) {
+          if (r.status === 403) return;
+          var items = r.body.results || [];
+          if (!items.length) { results.innerHTML = '<div class="empty">No memories.</div>'; return; }
+          results.innerHTML = items.map(function (m) {
+            return '<div class="memory"><div>' +
+              (m.pinned ? '<span class="pin">★ </span>' : '') +
+              esc(m.text) +
+              '<div class="meta"><span>' + esc(new Date(m.updatedAt).toLocaleString()) + '</span>' +
+              (m.tags || []).map(function (t) { return '<span class="tag">' + esc(t) + '</span>'; }).join('') +
+              '</div></div></div>';
+          }).join('');
+        });
+      }
+
+      document.getElementById('pair-btn').addEventListener('click', function () {
+        var code = (document.getElementById('code').value || '').replace(/\D/g, '');
+        var name = document.getElementById('name').value.trim() || 'Mobile';
+        if (code.length !== 6) { showErr('Enter the 6-digit code.'); return; }
+        fetch('/v1/pair/claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: code, name: name })
+        }).then(function (r) { return r.json().then(function (j) { return { status: r.status, body: j }; }); })
+          .then(function (r) {
+            if (r.status === 200 && r.body.token) {
+              localStorage.setItem(LS_TOKEN, r.body.token);
+              localStorage.setItem(LS_NAME, name);
+              switchToMem();
+            } else {
+              showErr(r.body.error || 'pairing failed (' + r.status + ')');
+            }
+          });
+      });
+
+      document.getElementById('forget-dev').addEventListener('click', function () {
+        if (!confirm('Forget this device on this phone?')) return;
+        localStorage.removeItem(LS_TOKEN);
+        localStorage.removeItem(LS_NAME);
+        location.reload();
+      });
+
+      document.getElementById('search-btn').addEventListener('click', search);
+      document.getElementById('search-query').addEventListener('keydown', function (e) { if (e.key === 'Enter') search(); });
+
+      document.getElementById('add-btn').addEventListener('click', function () {
+        var text = document.getElementById('add-text').value.trim();
+        if (!text) return;
+        var project = document.getElementById('add-project').value.trim() || 'default';
+        doApi('POST', '/v1/remember', { project: project, text: text, source: 'mobile' }, function (r) {
+          if (r.status === 200) {
+            document.getElementById('add-text').value = '';
+            search();
+          } else {
+            showErr(r.body.error || 'failed to save');
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "engramd",
+  "version": "0.1.0",
+  "description": "Engram — one shared, encrypted memory for every AI agent. Cross-agent memory daemon.",
+  "type": "commonjs",
+  "private": true,
+  "bin": {
+    "engramd": "bin/engramd.js",
+    "engram": "bin/engram.js"
+  },
+  "scripts": {
+    "start": "node bin/engramd.js",
+    "test": "node --test test/*.test.js",
+    "dast": "node scripts/dast.js",
+    "audit": "npm audit"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT"
+}

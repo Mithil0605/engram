@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark" />
+  <title>Engram — Every agent. One memory.</title>
+  <link rel="stylesheet" href="/assets/app.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">E</div>
+      <div class="title">
+        <h1>Engram</h1>
+        <p>Shared, encrypted memory for every AI agent on this host.</p>
+      </div>
+      <div class="pills" id="pills"></div>
+    </header>
+
+    <div class="banner warn" id="lock-banner" style="display:none">
+      <strong>Store locked</strong>
+      <span>Enter the store password to enable encryption and unlock memory access.</span>
+      <div class="row" style="margin-top:10px">
+        <input type="password" id="lock-pass" placeholder="store password" autocomplete="off" />
+        <button class="btn" id="lock-btn">Unlock</button>
+      </div>
+    </div>
+    <div id="banner-msg"></div>
+
+    <nav class="tabs">
+      <button data-tab="mem" class="active">Memories</button>
+      <button data-tab="add">Add</button>
+      <button data-tab="devices">Devices</button>
+      <button data-tab="security">Security</button>
+    </nav>
+
+    <section id="tab-mem">
+      <div class="card">
+        <div class="row">
+          <input id="search-project" placeholder="project (e.g. my-app)" value="default" />
+          <input id="search-query" placeholder="search memory…" style="flex:2" />
+          <button class="btn" id="search-btn">Search</button>
+        </div>
+      </div>
+      <div id="results"><div class="empty">Search or add your first memory.</div></div>
+    </section>
+
+    <section id="tab-add" style="display:none">
+      <div class="card">
+        <h2>Remember something</h2>
+        <div class="row" style="margin-bottom:10px">
+          <div><label class="lbl">Project</label><input id="add-project" value="default" /></div>
+          <div><label class="lbl">Tags (comma separated)</label><input id="add-tags" placeholder="ai, config" /></div>
+        </div>
+        <label class="lbl">Memory</label>
+        <textarea id="add-text" placeholder="e.g. This project uses pytest; run tests with `npm test`."></textarea>
+        <div class="row" style="margin-top:10px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:14px">
+            <input type="checkbox" id="add-pinned" style="width:auto" /> pin
+          </label>
+          <button class="btn" id="add-btn">Remember</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-devices" style="display:none">
+      <div class="card">
+        <h2>Connected devices</h2>
+        <div id="devices"></div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn" id="pair-btn">+ Pair a device</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-security" style="display:none">
+      <div class="card">
+        <h2>Encryption</h2>
+        <div id="sec"></div>
+      </div>
+      <div class="card">
+        <h2>Why it&rsquo;s safe</h2>
+        <div class="muted" style="line-height:1.6">
+          • Bound to 127.0.0.1 by default — only this machine can reach it.<br />
+          • Build a pairing code from here to connect a phone on your LAN.<br />
+          • Every request needs a bearer token; device tokens are revocable.<br />
+          • Stores are AES-256-GCM encrypted when a password is set (scrypt key).<br />
+          • 5 wrong password attempts = 5-minute lockout. Zero third-party deps.
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal-bg" id="pair-modal">
+    <div class="modal">
+      <h2 style="margin-top:0">Pair a device</h2>
+      <p class="muted">Open <code id="pair-url"></code> on your phone and enter the 6-digit code:</p>
+      <div class="code-display" id="pair-code">······</div>
+      <p class="muted small" id="pair-expiry"></p>
+      <div class="row" style="justify-content:flex-end;margin-top:8px">
+        <button class="btn ghost" id="pair-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>
